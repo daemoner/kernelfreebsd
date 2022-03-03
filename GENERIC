@@ -1,0 +1,479 @@
+#                        ,"       ,"                  
+#                       /(        )`"                             
+#                       \ \___   / |"                             
+#                       /- @[m_@[31m  `-/  '"                    
+#                      ([m/\/ \@[31m \   /\"                     
+#                      ([\ /\ /   |@[31m `    \"                    
+#                      ([/O  O    ) @[31m/    |"               
+#                      ([m`-^--'  )  m`<     '"                    
+#                     (_.)  _  ) / /"                             
+#                      `.___/`  / /"                              
+#                        `-----' /"                               
+#     <<<[33m<----.@[31m     __ / __   \"
+#     <<<[33m<----|====@[31mO)))@[33m==@[31m) \) /@[33m====|" 
+#     <<<[33m<----'@[31m    `--' `.__,' \"                    
+#                        |        |"                              
+#                         \       /       /\"                     
+#                   _____________@[31m( (_  / \______/"            
+#                 (   ,'  ,-----'   |"                          
+#                  `--{__________)@[m"                            
+#Формат конфигурационного файла достаточно прост.
+#Каждая строка представляет собой ключевое слово и один или более аргументов. 
+#Для простоты большинство строк содержат только один аргумент. 
+#Всё, что следует за символом # является комментарием и игнорируется.
+#Следующие разделы описывают каждый параметр, в порядке, в котором они появляются в GENERIC
+#Сборка собственного ядра - один из наиболее важных ритуалов, совершаемых опытными пользователями BSD. 
+#Несмотря на длительность этого процесса, ваша FreeBSD останется только в выигрыше. 
+#В отличие от ядра GENERIC, которое должно поддерживать широкий спектр аппаратного обеспечения, собственное ядро содержит поддержку аппаратного обеспечения только вашего компьютера. 
+#Это может давать следующие преимущества:
+#Меньшее время загрузки. Поскольку ядро будет пытаться определить только то аппаратное обеспечение, которое установлено в вашем компьютере, время, которое потребуется системе для загрузки, может значительно уменьшиться.
+#Уменьшение использования памяти. Собственное ядро часто использует меньше памяти, чем ядро GENERIC, так как из него исключены лишние драйвера и неиспользуемые функциональные возможности. Это важно тем, что часть оперативной памяти постоянно занята кодом ядра и поэтому не может быть выделена приложениям. Именно по этой причине собственное ядро особенно полезно при использовании систем с малым объемом оперативной памяти.
+#Поддержка дополнительного аппаратного обеспечения. Собственное ядро позволяет вам добавить поддержку устройств, отсутствующих в ядре GENERIC.
+#Итак разбор каждой опций и модуля и за что он отвечает:
+
+
+
+
+########################################################################################
+
+cpu		HAMMER			# Процессор компьютера, поумолчанию стоит HAMMER 
+					# Если не уверены, какой тип необходимо использовать вам, вы можете воспользоваться файлом /var/run/dmesg.boot, чтобы увидеть протокол загрузки системы.
+ident		GENERIC			# Индентификатор ядра
+
+makeoptions	DEBUG=-g		# Oпции отладки ядра
+makeoptions	WITH_CTF=1		# Запуск ctfconvert(1) для поддержки DTrace. 
+
+########################################################################################
+
+#Поумолчание в ядро не добавлена поддержка фаерволла поэтому встраиваем поддержку файрволла:
+
+options         IPFIREWALL		# встраиваем поддержку файрволла в ядро
+options         IPFIREWALL_VERBOSE	# вывод информации об отброшенных пакетах
+options         IPFIREWALL_VERBOSE_LIMIT=100	# Oграничение, чтоб весь /var
+						# Логами не засрали
+options         IPFIREWALL_FORWARD	# включаем поддержку перенаправления
+					# чтобы можно было сделать
+					# позрачный прокси-сервер
+					# TCP пакетов ядром
+options         IPDIVERT		# поддержка IP-маскарадинга
+options         DUMMYNET		# поддержка DUMMYNET (искуственное 
+					# ограничение пропускной способности 
+					# сети, может быть нужно если есть 
+					# необходимость урезать канал одним
+					# и разжать другим компьютерам)
+options		TCP_DROP_SYNFIN		# Это нужно, чтобы сетевые сканеры 
+					# не могли определять версию OS на
+					# сервере. Также нужно добавить в 
+					# /etc/rc.conf строчку
+					# tcp_drop_synfin="YES"
+########################################################################################
+
+
+
+
+options 	SCHED_ULE		# Планировщик по умолчанию во FreeBSD. Оставьте эту опцию.
+options 	NUMA			# Поддержка неоднородной архитектуры памяти 
+options 	PREEMPTION		# Позволяет высокоприоритетным нитям ядра вытеснять конкурентов, находящихся в режиме выполнения, 
+					# Эта опция может помочь повысить реактивность системы по отношению к внешним воздействиям, например, за счет снижения латентности нитей, обрабатывающих прерывания.
+options 	VIMAGE			# Виртуализация подсистем, например виртуальная сеть 
+
+options 	INET			# Поддержка сетевых возможностей. Оставьте эту опцию включенной, даже если вы не планируете подключаться к сети. 
+					# Большинство программ требуют, чтобы работал хотя бы интерфейс обратной связи (loopback) (т.е. создание сетевых соединений внутри вашего ПК), 
+					# так что эта опция в принципе является обязательной.
+
+options 	INET6			# Включает поддержку коммуникационных протоколов IPv6.
+options 	IPSEC_SUPPORT		# Разрешить kldload ipsec и tcpmd5, kldload для подгрузки модуля, tcpmd5 применяется исключительно для зашиты протокола BGP от ложных TCP-сегментов, 
+					# в частности от несанкционированного сброса TCP-соединений. Зашифрованная TCP-подпись использует алгоритм MD5
+
+options		ROUTE_MPATH		# Поддержка многопутевой маршрутизации, это маршрутизация метод, одновременно использующий несколько альтернативных путей через сеть.
+
+options 	TCP_OFFLOAD		# Разгрузка TCP, если коротко это технология, используемая в сетевых интерфейсных картах (NIC) для разгрузки обработки всего стека TCP/IP на сетевой контроллер.
+options 	TCP_BLACKBOX		# Расширенное ведение журнала событий TCP
+options 	TCP_HHOOK		# Фреймворк hhook(9) для TCP 
+options		TCP_RFC7413		# Быстрое открытие TCP, это расширение для ускорения открытия последовательных соединений протокола управления передачей (TCP) между двумя конечными точками.
+
+options 	SCTP_SUPPORT		# Разрешить kldload SCTP, при загрузке системы включает протокол транспортного уровня в компьютерных сетях
+options		KERN_TLS		# TLS передача и получение разгрузки, TLS это протокол защиты транспортного уровня
+options 	FFS			# Включает поддержку основной файловой системы. При удалении не загрузит ОС c HARD
+options 	SOFTUPDATES		# Этот параметр включает в ядре технологию Soft Updates, которая повышает скорость записи на диски.
+
+options 	UFS_ACL			# Этот параметр включает в ядре поддержку списков управления доступом (ACL)
+options 	UFS_DIRHASH		# Эта опция включает функциональность, которая повышает скорость дисковых операций на больших каталогах в обмен на использование дополнительной памяти. 
+					# Для большого сервера или рабочей станции рекомендуется оставить ее включенной, 
+					# и выключить для системы, для которой более приоритетна память, чем скорость доступа к дискам, например для брандмауэра.
+
+options 	UFS_GJOURNAL		# Включить ведение журнала UFS
+options 	QUOTA			# Включить дисковые квоты для UFS, Дисковые квоты – это способ задания объема дискового пространства, которое могут заполнять пользователи.
+options 	MD_ROOT			# Этот параметр включает поддержку использования дисков в памяти для корневой файловой системы.
+
+options 	NFSCL			# Клиент сетевой файловой системы, это программы, которые работают на компьютерах, подключенных к сети, и обслуживают запросы приложений на доступ к файлам, хранящимся на удаленном компьютере.
+options 	NFSD			# Сервер сетевой файловой системы
+options 	NFSLOCKD		# Диспетчер сетевой блокировки, сочетает в себе свойства как сервера, так и клиента. 
+					# Функции клиента выполняют обработку запросов от приложений и их передачу диспетчеру сетевой блокировки на сервере
+					# Сервер отвечает за прием от клиентов запросов на блокировку и генерирует вызовы для блокировки. После этого сервер отвечает на запрос клиента о блокировке.
+
+options 	NFS_ROOT		# NFS usable as /, requires NFSCL
+options 	MSDOSFS			# Файловая система MS-DOS. Если не собираешься монтировать форматированный в DOS раздел жесткого диска в момент загрузки, вы можете безопасно закомментировать этот параметр.
+					# Необходимый модуль будет автоматически загружен
+
+options 	CD9660			# Файловая система ISO 9660 для компакт-дисков. Если у вас нет привода CDROM или вы будете лишь изредка монтировать компакт-диски с данными, закомментируйте эту строку
+options 	PROCFS			# Файловая система процессов. Это "виртуальная" файловая система монтируемая в /proc, которая позволяет таким приложениям, как ps(1) выдавать вам больше информации о запущенных процессах. Использование PROCFS не требуется, 
+					# так как большинство мониторинговых и отладочных инструментов было адаптировано для работы без PROCFS
+					# система по умолчанию не монтирует файловую систему процессов.
+
+options 	PSEUDOFS		# Ядра, которые используют PROCFS, должны также включать поддержку PSEUDOFS
+
+options 	TMPFS			# Эффективная файловая система памяти, временное файловое хранилище во многих Unix-подобных ОС. 
+					# Предназначена для монтирования файловой системы, но размещается в ОЗУ вместо физического диска.
+
+options 	GEOM_RAID		# программное обеспечение функциональность RAID ехнология виртуализации данных для объединения нескольких физических дисковых устройств,
+					# в логический модуль для повышения отказоустойчивости и (или) производительности.
+options 	GEOM_LABEL		# Обеспечивает маркировку 
+options 	EFIRT			# Поддержка служб выполнения EFI
+options 	COMPAT_FREEBSD32	# Совместимость с бинарными файлами i386 
+options 	COMPAT_FREEBSD4		# Совместимость с freebsd версии 4
+options 	COMPAT_FREEBSD5		# Совместимость с freebsd версии 5
+options 	COMPAT_FREEBSD6		# Совместимость с freebsd версии 6
+options 	COMPAT_FREEBSD7		# Совместимость с freebsd версии 7
+options 	COMPAT_FREEBSD9		# Совместимость с freebsd версии 9 (Почему нету 8 я не знаю) 
+options 	COMPAT_FREEBSD10	# Совместимость с freebsd версии 10
+options 	COMPAT_FREEBSD11	# Совместимость с freebsd версии 11
+options 	COMPAT_FREEBSD12	# Совместимость с freebsd версии 12
+
+options 	SCSI_DELAY=5000		# Задержка (в мс) перед проверкой SCSI Этот параметр заставляет ядро приостановиться на 5 секунд перед тем, как идентифицировать каждое устройство SCSI в вашей системе. 
+					# Если установлены только жесткие диски IDE, то можно смело вырубить это 
+
+options 	KTRACE			# Включает поддержку трассировки процессов, что удобно при отладке.
+options 	STACK			# поддержка стека, если коротко это абстрактный тип данных, представляющий собой список элементов, 
+					# организованных по принципу LIFO (англ. last in — first out, «последним пришёл — первым вышел»).
+options 	SYSVSHM			# Этот параметр предоставляет поддержку разделяемой памяти System V. Наиболее распространенное применение этого - расширение XSHM в X, которое многие приложения,
+					# интенсивно работающие с графикой, будут автоматически использовать для повышения скорости работы. Если вы используете X, эта опция будет необходима.
+
+options 	SYSVMSG			# Поддержка сообщений System V. Этот параметр добавляет в ядро всего лишь несколько сотен байт.
+options 	SYSVSEM			# Поддержка семафоров System V. Не настолько часто используемая возможность, но в ядро добавляет всего несколько сотен байт.
+					# Команда ipcs(1) с параметром -p покажет все процессы, которые используют любую из этих возможностей System V.
+
+options 	_KPOSIX_PRIORITY_SCHEDULING #Расширения реального времени, добавленные 1993 POSIX®. Определенные приложения из коллекции используют их, например StarOffice.
+options 	PRINTF_BUFR_SIZE=128	# Предотвратить перемежающийся вывод printf.
+options 	KBD_INSTALL_CDEV	# Этот параметр разрешает формирование файлов устройств в /dev для клавиатур. (для всяких клав USB-овых)
+
+options 	HWPMC_HOOKS		# Необходимые хуки ядра для hwpmc
+options 	AUDIT			# Аудит событий безопасности
+
+options 	CAPABILITY_MODE		# Режим возможностей Capsicum, это усовершенствованная форма дескриптора файла, делегируемое право между процессами и дополнительными типами объектов помимо классического POSIX, такими как процессы, на которые можно ссылаться через возможности. 
+					# В режиме возможностей Capsicum процессы не могут использовать глобальные пространства имен 
+					# (например, пространство имен файловой системы) для поиска объектов и должны вместо этого наследовать или делегировать их.
+
+options 	CAPABILITIES		# Возможности Capsicum - это усовершенствованная форма дескриптора файла, делегируемое право между процессами и дополнительными типами объектов помимо классического POSIX,
+					# такими как процессы, на которые можно ссылаться через возможности.
+
+options 	MAC			# Поддерживаемые модули политик включают поддержку брандмауэра файловой системы на основе правил, списки управления доступом к портам TCP/UDP
+options 	KDTRACE_FRAME		# Гарантия что кадры скомпилированы  
+options 	KDTRACE_HOOKS		# Трассировки ядра 
+options 	DDB_CTF			# Компоновщик ядра ELF загружает данные CTF 
+options 	INCLUDE_CONFIG_FILE	# Включить этот файл в ядро 
+options 	RACCT			# Структура учета ресурсов 
+options 	RACCT_DEFAULT_TO_DISABLED # Установить kern.racct.enable=0 по умолчанию, - Получить информацию о загрузке виртуальной машины или контейнера по их имени в CBSD 
+options 	RCTL			# Ограничения ресурсов - Специальное API, под названием racct, собирает информацию по ресурсам, потребляемым процессом, пользователем и т.д. 
+
+#Поддержка отладки. Это нужно всегда:
+
+options 	KDB			# Включить поддержку отладчика ядра 
+options 	KDB_TRACE		# Распечатать трассировку стека для паники
+
+#Дезинфицирующие средства ядра 
+
+#options 	COVERAGE		# Общее покрытие ядра. Используется KCOV (отладка)
+#options 	KCOV			# Дезинфицирующее средство покрытия ядра (отладка)
+
+#Предупреждение: KUBSAN может привести к тому, что ядро будет слишком большим для загрузки загрузчиком. 
+#options 	KUBSAN			# Дезинфицирующее средство неопределенного поведения ядра
+#options 	KCSAN			# Дезинфектор параллелизма ядра 
+
+#Возможности дампа ядра 
+options 	EKCD			# Поддержка зашифрованных дампов ядра, диагностика и анализ причин сбоев ядра
+options 	GZIO			# gzip-сжатое ядро и пользовательские дампы 
+options 	ZSTDIO			# zstd-сжатое ядро и пользовательские дампы 
+options 	DEBUGNET		# отладочная сеть очень небольшая библиотека для отладки вашего доморощенного кода по протоколу UDP.
+options 	NETDUMP			# поддержка клиентов netdump, обеспечивает сброс ядра ядра по сети, а не на локальный диск. 
+					# Он реализует очень минимальный стек UDP/IPv4 и использует собственный протокол UDP для передачи дампа на сервер netdump, работающий на другом хосте. 
+options 	NETGDB			# поддержка клиентов netgdb переносимый отладчик проекта GNU
+
+#Сделать ядро с поддержкой SMP по умолчанию 
+options 	SMP			# Симметричное многопроцессорное ядро, архитектура многопроцессорных компьютеров, в которой два или более одинаковых процессора сравнимой производительности,
+					# подключаются единообразно к общей памяти (и периферийным устройствам) и выполняют одни и те же функции (почему, собственно, система и называется симметричной).
+options 	EARLY_AP_STARTUP
+
+#Управление частотой процессора (Если хочется понизить hz процессора)
+device		cpufreq
+
+#Поддержка интерфейса расширенного конфигурирования и управления питанием (Упровление питанием)
+device		acpi
+options 	IOMMU
+device		pci
+options 	PCI_HP			# Собственный HotPlug PCI-Express Горячая замена — термины, означающие отключение или подключение электронного оборудования в (компьютерной) системе 
+					# во время её работы без выключения питания и остановки (системы)
+options		PCI_IOV			# Это Технология виртуализации устройств, позволяющая предоставить виртуальным машинам прямой доступ к части аппаратных возможностей устройства.
+
+options 	COMPAT_LINUXKPI		# Включить сжатие буфера кадров для экономии энергии 
+
+# Поддержка дисковода
+device		fdc
+
+# ATA controllers -  параллельный интерфейс подключения накопителей (гибких дисков, жёстких дисков и оптических дисководов) к компьютеру.
+device		ahci			# AHCI-compatible SATA controllers - механизм, используемый для подключения накопителей информации стандарта Serial ATA
+device		ata			# Legacy ATA/SATA controllers - то последовательный интерфейс подключения накопителей к материнской плате компьютера. Данный стандарт пришел на смену интерфейсу АТА (РАТА, IDE)
+device		mvs			# Marvell 88SX50XX/88SX60XX/88SX70XX/SoC SATA -  контроллер, необходимый для корректной работы жестких дисков (HDD)
+device		siis			# SiliconImage SiI3124/SiI3132/SiI3531 SATA -  это чип с совершенно новой архитектурой и производитель позиционирует его как наиболее оптимальное решение для серверов, рабочих станций.
+
+# SCSI Controllers - интерфейс, разработанный для объединения в единую систему устройств различного профиля: накопителей на жестких магнитных носителях, сканеров, стримеров, CD-ROM и т.п.
+device		ahc			# AHA2940 and onboard AIC7xxx devices - хост-адаптер для серверов и рабочей станции на уровне начального уровня. Он перемещает данные быстро - до 20 Мбайт / с. 
+device		ahd			# AHA39320/29320 and onboard AIC79xx devices - модуль ядра, для скази контроллера интегрированного в эту мать.
+device		esp			# AMD Am53C974 (Tekram DC-390(T)) - Аппаратное решение Am53C974A дополняется обширным программным пакетом для всех основных операционных систем. 
+device		hptiop			# Highpoint RocketRaid 3xxx series - RAID-контроллеры
+device		isp			# Qlogic family - HCA-контроллеры, конвергентные сетевые адаптеры, коммутаторы и маршрутизаторы для сетей хранения данных. 
+#device		ispfw			# Прошивка для QLogic HBA - обычно модуль
+device		mpt			# LSI-Logic MPT-Fusion - рейд контроллеры
+device		mps			# LSI-Logic MPT-Fusion 2 - рейд контроллеры вересии 2 
+device		mpr			# LSI-Logic MPT-Fusion 3 - рейд контроллеры версии 3
+device		sym			# NCR/Symbios Logic - чипсеты хост-адаптеров SCSI и подсистем хранения дисковых массивов.
+device		isci			# Intel C600 SAS controller - Интеловская модель процессора ввода/вывода C600/610 
+device		ocs_fc			# Emulex FC adapters - Адаптеры главной шины (HBA) Emulex Fibre Channel (FC) 6-го поколения с пропускной способностью 16 Гбит/с от компании Broadcom 
+device		pvscsi			# VMware PVSCSI - самая современная версия виртуального дискового контроллера.
+
+# ATA/SCSI peripherals - Периферийные устройства
+device		scbus			# SCSI bus (required for ATA/SCSI)
+device		ch			# SCSI media changers 
+device		da			# Direct Access (disks) 
+device		sa			# Sequential Access (tape etc) 
+device		cd			# CD 
+device		pass			# Passthrough device (direct ATA/SCSI access) 
+device		ses			# Enclosure Services (SES and SAF-TE)
+#device		ctl			# CAM Target Layer 
+
+#Контроллеры RAID, подключенные к подсистеме SCSI 
+device		amr			# AMI MegaRAID 
+device		arcmsr			# Areca SATA II RAID 
+device		ciss			# Compaq Smart RAID 5*
+device		iir			# Intel Integrated RAID
+device		ips			# IBM (Adaptec) ServeRAID
+device		mly			# Mylex AcceleRAID/eXtremeRAID
+device		twa			# 3ware 9000 series PATA/SATA RAID
+device		smartpqi		# Microsemi smartpqi driver
+device		tws			# LSI 3ware 9750 SATA+SAS 6Gb/s RAID controller
+
+# RAID контроллеры
+device		aac			# Adaptec FSA RAID
+device		aacp			# SCSI passthrough for aac (requires CAM)
+device		aacraid			# Adaptec by PMC RAID
+device		ida			# Compaq Smart RAID
+device		mfi			# LSI MegaRAID SAS
+device		mlx			# Mylex DAC960 family
+device		mrsas			# LSI/Avago MegaRAID SAS/SATA, 6Gb/s and 12Gb/s
+device		pmspcv			# PMC-Sierra SAS/SATA Controller driver
+#XXX pointer/int warnings
+#device		pst			# Promise Supertrak SX6000
+device		twe			# 3ware ATA RAID
+
+#Поддержка NVM Express (NVMe)  протокол доступа к твердотельным накопителям
+device		nvme			# base NVMe driver
+device		nvd			# expose NVMe namespaces as disks, depends on nvme
+
+#Поддержка устройства Intel Volume Management (VMD) встроенный в процессор Intel Xeon Scalable аппаратный контроллер интерфейса NVMe, 
+#обеспечивающий возможность горячей замены накопителей, корректную индикацию статуса, а также работу с RAID-массивами.
+device		vmd			# base VMD device
+device		vmd_bus			# bus for VMD children
+
+#atkbdc0 управляет как клавиатурой, так и мышью PS/2. 
+device		atkbdc			# AT keyboard controller
+device		atkbd			# AT keyboard
+device		psm			# PS/2 mouse
+
+device		kbdmux			# keyboard multiplexer
+
+#Поддержка видео драйвера
+device		vga			# VGA video card driver
+options 	VESA			# Add support for VESA BIOS Extensions (VBE)
+
+device		splash			# Splash screen and screen saver support
+
+#syscons — драйвер консоли по умолчанию, напоминающий консоль SCO. 
+device		sc
+options 	SC_PIXEL_MODE		# add support for the raster text mode
+
+#Драйвер видео в консоли. 
+device		vt
+device		vt_vga
+device		vt_efifb
+device		vt_vbefb
+
+device		agp			# support several AGP chipsets
+
+# Поддержка PCCARD (PCMCIA) спецификация на модули расширения, разработанная ассоциацией PCMCIA
+# PCMCIA and cardbus bridge support
+device		cbb			# cardbus (yenta) bridge
+device		pccard			# PC Card (16-bit) bus
+device		cardbus			# CardBus (32-bit) bus
+
+# Последовательный (COM) порт 
+device		uart			# Generic UART driver
+
+# Параллельные порты
+device		ppc
+device		ppbus			# Parallel port bus (required)
+device		lpt			# Printer
+device		ppi			# Parallel port interface device
+#device		vpo			# Requires scbus and da
+
+device		puc			# Multi I/O cards and multi-channel UARTs
+
+# Компьютерные шины, использующую программную модель шины PCI 
+device		iflib
+device		em			# Intel PRO/1000 Gigabit Ethernet Family
+device		ix			# Intel PRO/10GbE PCIE PF Ethernet
+device		ixv			# Intel PRO/10GbE PCIE VF Ethernet
+device		ixl			# Intel 700 Series Physical Function
+device		iavf			# Intel Adaptive Virtual Function
+device		ice			# Intel 800 Series Physical Function
+device		vmx			# VMware VMXNET3 Ethernet
+device		axp			# AMD EPYC integrated NIC
+
+# Сетевая карта или сетевой адаптер.
+device		bxe			# Broadcom NetXtreme II BCM5771X/BCM578XX 10GbE
+device		le			# AMD Am7900 LANCE and Am79C9xx PCnet
+device		ti			# Alteon Networks Tigon I/II gigabit Ethernet
+
+#NVIDIA Сетевые контроллеры
+device		mlx5			# Base driver
+device		mlxfw			# Firmware update
+device		mlx5en			# Ethernet driver
+
+#Сетевые карты PCI Ethernet, использующие общий код контроллера шины MII. 
+#ПРИМЕЧАНИЕ. Обязательно сохраните строку «device miibus», чтобы использовать эти сетевые карты! 
+device		miibus			# MII bus support
+device		ae			# Attansic/Atheros L2 FastEthernet
+device		age			# Attansic/Atheros L1 Gigabit Ethernet
+device		alc			# Atheros AR8131/AR8132 Ethernet
+device		ale			# Atheros AR8121/AR8113/AR8114 Ethernet
+device		bce			# Broadcom BCM5706/BCM5708 Gigabit Ethernet
+device		bfe			# Broadcom BCM440x 10/100 Ethernet
+device		bge			# Broadcom BCM570xx Gigabit Ethernet
+device		cas			# Sun Cassini/Cassini+ and NS DP83065 Saturn
+device		dc			# DEC/Intel 21143 and various workalikes
+device		et			# Agere ET1310 10/100/Gigabit Ethernet
+device		fxp			# Intel EtherExpress PRO/100B (82557, 82558)
+device		gem			# Sun GEM/Sun ERI/Apple GMAC
+device		jme			# JMicron JMC250 Gigabit/JMC260 Fast Ethernet
+device		lge			# Level 1 LXT1001 gigabit Ethernet
+device		msk			# Marvell/SysKonnect Yukon II Gigabit Ethernet
+device		nfe			# nVidia nForce MCP on-board Ethernet
+device		nge			# NatSemi DP83820 gigabit Ethernet
+device		re			# RealTek 8139C+/8169/8169S/8110S
+device		rl			# RealTek 8129/8139
+device		sge			# Silicon Integrated Systems SiS190/191
+device		sis			# Silicon Integrated Systems SiS 900/SiS 7016
+device		sk			# SysKonnect SK-984x & SK-982x gigabit Ethernet
+device		ste			# Sundance ST201 (D-Link DFE-550TX)
+device		stge			# Sundance/Tamarack TC9021 gigabit Ethernet
+device		vge			# VIA VT612x gigabit Ethernet
+device		vr			# VIA Rhine, Rhine II
+device		xl			# 3Com 3c90x (``Boomerang'', ``Cyclone'')
+
+#Беспроводные сетевые карты 
+device		wlan			# 802.11 support
+options 	IEEE80211_DEBUG		# enable debug msgs
+options 	IEEE80211_SUPPORT_MESH	# enable 802.11s draft support
+device		wlan_wep		# 802.11 WEP support
+device		wlan_ccmp		# 802.11 CCMP support
+device		wlan_tkip		# 802.11 TKIP support
+device		wlan_amrr		# AMRR transmit rate control algorithm
+device		an			# Aironet 4500/4800 802.11 wireless NICs.
+device		ath			# Atheros NICs
+device		ath_pci			# Atheros pci/cardbus glue
+device		ath_hal			# pci/cardbus chip support
+options 	AH_AR5416_INTERRUPT_MITIGATION # AR5416 interrupt mitigation
+options 	ATH_ENABLE_11N		# Enable 802.11n support for AR5416 and later
+device		ath_rate_sample		# SampleRate tx rate control for ath
+#device		bwi			# Broadcom BCM430x/BCM431x wireless NICs.
+#device		bwn			# Broadcom BCM43xx wireless NICs.
+device		ipw			# Intel 2100 wireless NICs.
+device		iwi			# Intel 2200BG/2225BG/2915ABG wireless NICs.
+device		iwn			# Intel 4965/1000/5000/6000 wireless NICs.
+device		malo			# Marvell Libertas wireless NICs.
+device		mwl			# Marvell 88W8363 802.11n wireless NICs.
+device		ral			# Ralink Technology RT2500 wireless NICs.
+device		wpi			# Intel 3945ABG wireless NICs.
+
+#Псевдоустройства. (позволяет запускать программы FreeBSD, которые были сжаты при помощи gzip.)
+device		crypto			# core crypto support
+device		aesni			# AES-NI OpenCrypto module
+device		loop			# Network loopback
+device		padlock_rng		# VIA Padlock RNG
+device		rdrand_rng		# Intel Bull Mountain RNG
+device		ether			# Ethernet support
+device		vlan			# 802.1Q VLAN support
+device		tuntap			# Packet tunnel.
+device		md			# Memory "disks"
+device		gif			# IPv6 and IPv4 tunneling
+device		firmware		# firmware assist module
+device		xz			# lzma decompression
+
+# Устройство `bpf' включает пакетный фильтр Беркли. 
+# Помните об административных последствиях включения этого 
+# Внимание для DHCP требуется «bpf» !!!
+device		bpf			# Berkeley packet filter
+
+# USB Устройства
+options 	USB_DEBUG		# enable debug msgs
+device		uhci			# UHCI PCI->USB interface
+device		ohci			# OHCI PCI->USB interface
+device		ehci			# EHCI PCI->USB interface (USB 2.0)
+device		xhci			# XHCI PCI->USB interface (USB 3.0)
+device		usb			# USB Bus (required)
+device		ukbd			# Keyboard
+device		umass			# Disks/Mass storage - Requires scbus and da
+
+#Звуковая поддержка 
+device		sound			# Generic sound driver (required)
+device		snd_cmi			# CMedia CMI8338/CMI8738
+device		snd_csa			# Crystal Semiconductor CS461x/428x
+device		snd_emu10kx		# Creative SoundBlaster Live! and Audigy
+device		snd_es137x		# Ensoniq AudioPCI ES137x
+device		snd_hda			# Intel High Definition Audio
+device		snd_ich			# Intel, NVidia and other ICH AC'97 Audio
+device		snd_via8233		# VIA VT8233x Audio
+
+#Карты флэш-памяти
+device		mmc			# MMC/SD bus
+device		mmcsd			# MMC/SD memory card
+device		sdhci			# Generic PCI SD Host Controller
+device		rtsx			# Realtek SD card reader
+
+#Поддержка виртуализации 
+device		virtio			# Generic VirtIO bus (required)
+device		virtio_pci		# VirtIO PCI device
+device		vtnet			# VirtIO Ethernet device
+device		virtio_blk		# VirtIO Block device
+device		virtio_scsi		# VirtIO SCSI device
+device		virtio_balloon		# VirtIO Memory Balloon device
+
+# Драйверы HyperV и поддержка расширений 
+device		hyperv			# HyperV drivers 
+
+# Оптимизация гостевой системы Xen HVM 
+#ПРИМЕЧАНИЕ. XENHVM зависит от xenpci. Они должны быть добавлены или удалены вместе. 
+options 	XENHVM			# Xen HVM kernel infrastructure
+device		xenpci			# Xen HVM Hypervisor services driver
+
+# Netmap обеспечивает прямой доступ к кольцам TX/RX на поддерживаемых сетевых адаптерах. 
+device		netmap			# netmap(4) support
+
+# evdev Устройства 
+options 	EVDEV_SUPPORT		# поддержка evdev в устаревших драйверах 
+device		evdev			# поддержка evdev 
+device		uinput			# установить /dev/uinput cdev 
+
+#Скрытая поддержка 
+options 	HID_DEBUG		# включить отладочные сообщения 
+device		hid			# Cкрытая поддержка
+options 	IICHID_SAMPLING		# Обходной путь без поддержки GPIO INTR 
